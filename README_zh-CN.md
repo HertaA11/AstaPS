@@ -47,6 +47,19 @@ Windows 上用 `.\gradlew.bat`。
 4. 再启动一次。默认情况下，调度服务器监听 `8088`，游戏服务器监听 `22101`。
 5. 把客户端指向调度服务器：[GrasscutterTools](https://github.com/jie65535/GrasscutterCommandGenerator) 自带代理，也可以用 Fiddler、mitmproxy 或客户端补丁。
 
+## 自定义水印
+
+`config.json` 里的 `gameOptions.watermark` 控制登录后左上角的 UID 水印：
+
+| 字段 | 说明 |
+|---|---|
+| `enabled` | 是否启用自定义水印。`false` 时用内置 Lua 水印 |
+| `text` | 水印文字。留空用内置水印；含 `{uid}` 时替换成玩家 UID，不含时自动把 UID 追加在后面 |
+| `color` | 起始颜色，`#RRGGBB` 或 `#RGB` |
+| `gradientTo` | 渐变结束颜色。留空或非法值则用单色 |
+
+文字编码后不能超过 254 字节。超限会退回内置水印，并在日志里打一条警告。
+
 ## 命令
 
 游戏内命令以 `/` 开头，服务器控制台不需要。输入 `help` 查看命令列表，`help <命令> [子命令...]` 查看语法和别名。控制台支持 Tab 补全，参数错误时会显示对应语法。
