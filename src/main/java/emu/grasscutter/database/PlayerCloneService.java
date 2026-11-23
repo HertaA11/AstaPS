@@ -105,9 +105,9 @@ public final class PlayerCloneService {
                         requestedUid == 0 ? allocateTargetUid() : validateRequestedUid(requestedUid);
                 int sourceUid = sourcePlayer.getUid();
 
-                var database = DatabaseManager.getGameDatabase();
+                var database = DatabaseManager.getGameDatastore();
                 Document sourcePlayerDocument =
-                        database.getCollection("players").find(eq("_id", sourceUid)).first();
+                        database.collection("players").find(eq("_id", sourceUid)).first();
                 if (sourcePlayerDocument == null) {
                     throw new IllegalStateException(
                             "Source player document disappeared while cloning UID " + sourceUid);
@@ -118,11 +118,11 @@ public final class PlayerCloneService {
                 Document targetPlayerDocument = new Document(sourcePlayerDocument);
                 targetPlayerDocument.put("_id", targetUid);
                 targetPlayerDocument.put("accountId", targetAccountId);
-                database.getCollection("players").insertOne(targetPlayerDocument);
+                database.collection("players").insertOne(targetPlayerDocument);
 
                 int clonedDocuments = 1;
                 for (OwnedCollection owned : OWNED_COLLECTIONS) {
-                    var collection = database.getCollection(owned.name());
+                    var collection = database.collection(owned.name());
                     for (Document source : collection.find(eq(owned.ownerField(), sourceUid))) {
                         Document target = cloneOwnedDocument(source, owned.ownerField(), targetUid);
                         collection.insertOne(target);
@@ -171,8 +171,8 @@ public final class PlayerCloneService {
     }
 
     private static void rollbackClone(int targetUid, String targetAccountId) {
-        var database = DatabaseManager.getGameDatabase();
-        var players = database.getCollection("players");
+        var database = DatabaseManager.getGameDatastore();
+        var players = database.collection("players");
         Document targetPlayer =
                 players
                         .find(
@@ -185,7 +185,7 @@ public final class PlayerCloneService {
         if (targetPlayer != null) {
             for (OwnedCollection owned : OWNED_COLLECTIONS) {
                 database
-                        .getCollection(owned.name())
+                        .collection(owned.name())
                         .deleteMany(eq(owned.ownerField(), targetUid));
             }
             players.deleteOne(

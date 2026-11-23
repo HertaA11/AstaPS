@@ -124,8 +124,10 @@ dependencies {
     implementation 'com.esotericsoftware:reflectasm:1.11.9'
     implementation 'com.github.davidmoten:rtree-multi:0.1'
 
-    // MongoDB object mapper.
+    // MongoDB object mapper. Kept for the optional "mongo" storage driver.
     implementation 'dev.morphia.morphia:morphia-core:2.2.7'
+    // Default storage driver: one SQLite file holding every document as JSON.
+    implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
 
     // Utility libraries.
     implementation 'org.greenrobot:eventbus-java:3.3.1'

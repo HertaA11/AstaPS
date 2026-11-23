@@ -1,8 +1,7 @@
 package emu.grasscutter.database;
 
-import dev.morphia.query.FindOptions;
-import dev.morphia.query.Sort;
 import emu.grasscutter.game.player.Player;
+import java.util.Comparator;
 import java.util.function.Consumer;
 
 /** Allocates player UIDs without assuming that the historic 10,001 counter floor is free. */
@@ -11,12 +10,10 @@ public final class PlayerUidAllocator {
             new PlayerUidReservation.Store() {
                 @Override
                 public int highestUid() {
-                    var highest =
-                            DatabaseManager.getGameDatastore()
-                                    .find(Player.class)
-                                    .iterator(new FindOptions().sort(Sort.descending("_id")).limit(1))
-                                    .tryNext();
-                    return highest == null ? 0 : highest.getUid();
+                    return DatabaseManager.getGameDatastore().find(Player.class).list().stream()
+                            .max(Comparator.comparingInt(Player::getUid))
+                            .map(Player::getUid)
+                            .orElse(0);
                 }
 
                 @Override

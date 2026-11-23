@@ -27,7 +27,6 @@
  */
 package emu.grasscutter.game.world;
 
-import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.ReplaceOptions;
 import emu.grasscutter.Grasscutter;
@@ -36,6 +35,7 @@ import emu.grasscutter.data.GameDepot;
 import emu.grasscutter.data.excels.GatherData;
 import emu.grasscutter.data.excels.RefreshPolicyExcelConfigData;
 import emu.grasscutter.database.DatabaseManager;
+import emu.grasscutter.database.SqliteDatastore;
 import emu.grasscutter.game.dungeons.DomainDungeonHelper;
 import emu.grasscutter.game.entity.EntityGadget;
 import emu.grasscutter.game.entity.EntityMonster;
@@ -76,8 +76,8 @@ public final class OpenWorldSpawnHelper {
         return n + ":" + n2 + ":" + n3 + ":" + n4;
     }
 
-    private static MongoCollection<Document> col() {
-        return DatabaseManager.getGameDatabase().getCollection(COLLECTION);
+    private static SqliteDatastore.RawCollection col() {
+        return DatabaseManager.getGameDatastore().collection(COLLECTION);
     }
 
     private static int resolveOwnerUid(Scene scene) {

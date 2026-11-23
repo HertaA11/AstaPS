@@ -79,7 +79,9 @@ public final class ServerWatchdog {
 
     private static void checkDatabase() {
         try {
-            DatabaseManager.getGameDatastore().getDatabase().runCommand(new Document("ping", 1));
+            if (!DatabaseManager.getGameDatastore().ping()) {
+                throw new IllegalStateException("SQLite database is not responding");
+            }
 
             if (DATABASE_DOWN.compareAndSet(true, false)) {
                 Grasscutter.getLogger().info("[Watchdog] Database is back. Resuming.");

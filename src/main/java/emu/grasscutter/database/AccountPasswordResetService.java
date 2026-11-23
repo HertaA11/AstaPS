@@ -29,7 +29,7 @@ public final class AccountPasswordResetService {
         // Async account writes must finish before the password and token update. A single
         // MongoDB update makes the new password and the two token revocations atomic.
         try (DatabaseWriteBarrier ignored = DatabaseWriteBarrier.acquire()) {
-            var accounts = DatabaseManager.getAccountDatastore().getDatabase().getCollection("accounts");
+            var accounts = DatabaseManager.getAccountDatastore().collection("accounts");
             var result = accounts.updateOne(eq("_id", account.getId()), update);
             if (result.getMatchedCount() != 1) {
                 throw new IllegalStateException("Account no longer exists: " + account.getUsername());

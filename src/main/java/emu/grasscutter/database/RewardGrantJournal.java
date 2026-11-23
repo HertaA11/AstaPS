@@ -1,6 +1,5 @@
 package emu.grasscutter.database;
 
-import com.mongodb.MongoWriteException;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import java.util.ArrayList;
@@ -154,8 +153,8 @@ public final class RewardGrantJournal {
     }
 
     private static final class MongoStore implements Store {
-        private com.mongodb.client.MongoCollection<Document> collection() {
-            return DatabaseManager.getGameDatabase().getCollection("reward_grant_receipts");
+        private SqliteDatastore.RawCollection collection() {
+            return DatabaseManager.getGameDatastore().collection("reward_grant_receipts");
         }
 
         @Override
@@ -189,8 +188,9 @@ public final class RewardGrantJournal {
                 try {
                     collection().insertOne(doc);
                     return true;
-                } catch (MongoWriteException conflict) {
-                    if (conflict.getError() != null && conflict.getError().getCode() == 11000) {
+                } catch (IllegalStateException conflict) {
+                    if (conflict.getMessage() != null
+                            && conflict.getMessage().startsWith("Duplicate key")) {
                         return false;
                     }
                     throw conflict;

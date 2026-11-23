@@ -41,9 +41,10 @@ public class ConfigContainer {
      * Version 17 - 'gameOptions.unlockAllOpenStatesOnLogin' controls optional login feature unlock.
      * Version 18 - 'gameOptions.mapFogEnabled' controls exploration fog (enabled by default).
      * Version 19 - 'gameOptions.watermark' adds configurable UID watermark text and colors.
+     * Version 20 - 'database.*.driver' selects sqlite (default) or mongo storage.
      */
     private static int version() {
-        return 19;
+        return 20;
     }
 
     /**
@@ -120,7 +121,12 @@ public class ConfigContainer {
         public DataStore game = new DataStore();
 
         public static class DataStore {
-            public String connectionUri = "mongodb://localhost:27017";
+            /* "sqlite" stores every document as JSON in one SQLite file. "mongo" keeps the
+             * original Morphia/MongoDB path for anyone who still wants it. */
+            public String driver = "sqlite";
+            /* sqlite: path to the database file, relative to the working directory unless absolute.
+             * mongo: the original mongodb:// URI. */
+            public String connectionUri = "data/grasscutter.db";
             public String collection = "grasscutter";
         }
     }

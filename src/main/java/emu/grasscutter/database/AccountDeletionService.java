@@ -60,24 +60,24 @@ public final class AccountDeletionService {
     }
 
     private static void deletePlayerData(int uid) {
-        var database = DatabaseManager.getGameDatabase();
+        var database = DatabaseManager.getGameDatastore();
 
-        database.getCollection("achievements").deleteMany(eq("uid", uid));
-        database.getCollection("activities").deleteMany(eq("uid", uid));
-        database.getCollection("homes").deleteMany(eq("ownerUid", uid));
-        database.getCollection("mail").deleteMany(eq("ownerUid", uid));
-        database.getCollection("avatars").deleteMany(eq("ownerId", uid));
-        database.getCollection("gachas").deleteMany(eq("ownerId", uid));
-        database.getCollection("items").deleteMany(eq("ownerId", uid));
-        database.getCollection("quests").deleteMany(eq("ownerUid", uid));
-        database.getCollection("battlepass").deleteMany(eq("ownerUid", uid));
-        database.getCollection("dailytasks").deleteMany(eq("ownerUid", uid));
-        database.getCollection("group_instances").deleteMany(eq("ownerUid", uid));
-        database.getCollection("open_world_spawns").deleteMany(eq("ownerUid", uid));
-        database.getCollection("music_game_beatmaps").deleteMany(eq("authorUid", uid));
+        database.collection("achievements").deleteMany(eq("uid", uid));
+        database.collection("activities").deleteMany(eq("uid", uid));
+        database.collection("homes").deleteMany(eq("ownerUid", uid));
+        database.collection("mail").deleteMany(eq("ownerUid", uid));
+        database.collection("avatars").deleteMany(eq("ownerId", uid));
+        database.collection("gachas").deleteMany(eq("ownerId", uid));
+        database.collection("items").deleteMany(eq("ownerId", uid));
+        database.collection("quests").deleteMany(eq("ownerUid", uid));
+        database.collection("battlepass").deleteMany(eq("ownerUid", uid));
+        database.collection("dailytasks").deleteMany(eq("ownerUid", uid));
+        database.collection("group_instances").deleteMany(eq("ownerUid", uid));
+        database.collection("open_world_spawns").deleteMany(eq("ownerUid", uid));
+        database.collection("music_game_beatmaps").deleteMany(eq("authorUid", uid));
 
-        database.getCollection("friendships").deleteMany(eq("ownerId", uid));
-        database.getCollection("friendships").deleteMany(eq("friendId", uid));
+        database.collection("friendships").deleteMany(eq("ownerId", uid));
+        database.collection("friendships").deleteMany(eq("friendId", uid));
 
         DatabaseManager.getGameDatastore()
                 .find(Player.class)

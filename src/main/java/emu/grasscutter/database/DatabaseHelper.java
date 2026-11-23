@@ -3,10 +3,7 @@ package emu.grasscutter.database;
 import static com.mongodb.client.model.Filters.eq;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
-import com.mongodb.MongoWriteException;
 
-import dev.morphia.Datastore;
-import dev.morphia.query.*;
 import dev.morphia.query.experimental.filters.Filters;
 import emu.grasscutter.*;
 import emu.grasscutter.game.Account;
@@ -33,6 +30,7 @@ import emu.grasscutter.server.threading.ThreadPoolType;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.ConcurrentModificationException;
 import java.util.List;
@@ -45,7 +43,6 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import lombok.Getter;
-import org.bson.Document;
 
 public final class DatabaseHelper {
     private static final AccountCreationService.Store ACCOUNT_CREATION_STORE =
@@ -61,8 +58,8 @@ public final class DatabaseHelper {
                         runSynchronousDatabaseWrite(
                                 () -> DatabaseManager.getAccountDatastore().insert(account));
                         return AccountCreationService.InsertResult.INSERTED;
-                    } catch (MongoWriteException e) {
-                        if (e.getError() == null || e.getError().getCode() != 11000) throw e;
+                    } catch (IllegalStateException e) {
+                        if (!isDuplicateKey(e)) throw e;
                         if (DatabaseHelper.getAccountByName(account.getUsername()) != null) {
                             return AccountCreationService.InsertResult.USERNAME_TAKEN;
                         }
@@ -320,8 +317,7 @@ public final class DatabaseHelper {
                                                 "^"
                                                         + java.util.regex.Pattern.quote(
                                                                 LEGACY_IP_BAN_REASON_PREFIX + ip))))
-                .iterator()
-                .toList();
+                .list();
     }
 
     /** Lifts the ban on every account this IP took down. Returns how many were unbanned. */
@@ -378,11 +374,10 @@ public final class DatabaseHelper {
      */
     public static void saveAccountFields(Account account, String... fields) {
         var datastore = DatabaseManager.getAccountDatastore();
-        var update = accountFieldUpdate(datastore, account, fields);
         databaseWriters.submitOrderedUncapped(
                 eventExecutorAccount,
                 new AccountKey(account.getId()),
-                () -> datastore.getDatabase().getCollection("accounts").updateOne(eq("_id", account.getId()), update));
+                () -> datastore.updateFields(account, fields));
     }
 
     /** Orders one account's writes; whole-document saves and field updates share it. */
@@ -391,21 +386,6 @@ public final class DatabaseHelper {
     /** Kept for callers of the earlier synchronous form; {@link #saveAccountFields} is queued already. */
     public static void saveAccountFieldsAsync(Account account, String... fields) {
         saveAccountFields(account, fields);
-    }
-
-    /** A $set of the fields as Morphia would store them, and an $unset of those it would omit. */
-    static Document accountFieldUpdate(Datastore datastore, Account account, String... fields) {
-        var stored = datastore.getMapper().toDocument(account);
-        var set = new Document();
-        var unset = new Document();
-        for (var field : fields) {
-            if (stored.get(field) != null) set.put(field, stored.get(field));
-            else unset.put(field, "");
-        }
-        var update = new Document();
-        if (!set.isEmpty()) update.put("$set", set);
-        if (!unset.isEmpty()) update.put("$unset", unset);
-        return update;
     }
 
     /**
@@ -454,6 +434,12 @@ public final class DatabaseHelper {
      * Orders writes by object identity: a save queued while an earlier one runs must not land
      * first and leave the older state in the database.
      */
+    /** SQLite reports a taken primary key through the SQLiteDatastore wrapper's message. */
+    private static boolean isDuplicateKey(RuntimeException e) {
+        String message = e.getMessage();
+        return message != null && message.startsWith("Duplicate key");
+    }
+
     private record SameObject(Object object) {
         @Override
         public boolean equals(Object other) {
@@ -519,18 +505,6 @@ public final class DatabaseHelper {
         var name = object.getClass().getSimpleName();
         try {
             DatabaseManager.getGameDatastore().save(object);
-        } catch (MongoWriteException e) {
-            if (e.getError() == null || e.getError().getCode() != 11000) {
-                Grasscutter.getLogger().error("Failed to save {}.", name, e);
-                return;
-            }
-            // The id is reflected back onto the object by the failed insert, so the retry
-            // becomes a replace.
-            try {
-                DatabaseManager.getGameDatastore().save(object);
-            } catch (Throwable t) {
-                Grasscutter.getLogger().error("Failed to save {} after a duplicate key.", name, t);
-            }
         } catch (ConcurrentModificationException e) {
             for (var attempt = 0; attempt < 8; attempt++) {
                 try {
@@ -868,15 +842,14 @@ public final class DatabaseHelper {
 
     public static List<GachaRecord> getGachaRecords(
             int ownerId, int page, int gachaType, int pageSize) {
-        return DatabaseManager.getGameDatastore()
-                .find(GachaRecord.class)
-                .filter(Filters.eq("ownerId", ownerId), Filters.eq("gachaType", gachaType))
-                .iterator(
-                        new FindOptions()
-                                .sort(Sort.descending("transactionDate"))
-                                .skip(pageSize * page)
-                                .limit(pageSize))
-                .toList();
+        List<GachaRecord> records =
+                DatabaseManager.getGameDatastore()
+                        .find(GachaRecord.class)
+                        .filter(Filters.eq("ownerId", ownerId), Filters.eq("gachaType", gachaType))
+                        .list();
+        // Newest first, then page through them. The old Mongo query did this with a sort option.
+        records.sort(Comparator.comparing(GachaRecord::getTransactionDate).reversed());
+        return records.stream().skip((long) pageSize * page).limit(pageSize).toList();
     }
 
     public static long getGachaRecordsMaxPage(int ownerId, int page, int gachaType) {
